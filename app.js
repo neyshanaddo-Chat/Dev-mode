@@ -1140,7 +1140,35 @@ window.__dmBusy = () => tabs.some((t) => t.text !== t.disk);
   const s = (await idb.all().catch(() => [])).find((x) => x.id === id);
   if (s && s.handle.queryPermission && (await s.handle.queryPermission({ mode: 'readwrite' })) === 'granted') openSite(s);
 })();
-if (!window.showDirectoryPicker && !TEST) { $('#unsupported').hidden = false; $('#openFolder').disabled = true; }
+// Dev mode is a computer tool: phones and tablets get a message instead.
+const IS_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+if (IS_PHONE && !TEST) {
+  $('#phoneOnly').hidden = false; $('#openFolder').hidden = true; $('#recent').hidden = true;
+  $('.home-card > p.small').hidden = true;
+} else if (!window.showDirectoryPicker && !TEST) { $('#unsupported').hidden = false; $('#openFolder').disabled = true; }
+
+// ⬇ Install (the "Download" button on Ai-Tools opens Dev mode with ?install=1)
+const installed = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
+let installEvt = null;
+function showInstall(force) {
+  if (IS_PHONE || installed()) { $('#installBox').hidden = true; return; }
+  if (!installEvt && !force) return;
+  $('#installBox').hidden = false;
+  $('#installBtn').hidden = !installEvt;
+  if (!installEvt) $('#installHow').innerHTML = /Edg\//.test(navigator.userAgent)
+    ? 'In Edge: click <b>⋯</b> (top right) → <b>Apps</b> → <b>Install Dev mode</b>.'
+    : 'In Chrome: click the install icon <b>⊕</b> at the right of the address bar, or <b>⋮</b> → <b>Cast, save and share</b> → <b>Install page as app</b>.';
+}
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; showInstall(); });
+addEventListener('appinstalled', () => { installEvt = null; $('#installBox').hidden = true; toast('✓ Dev mode is installed. Find it in your Start menu.'); });
+$('#installBtn').onclick = async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  const r = await installEvt.userChoice.catch(() => null);
+  if (r && r.outcome === 'accepted') $('#installBox').hidden = true;
+  installEvt = null; $('#installBtn').hidden = true;
+};
+showInstall(/[?&]install=1/.test(location.search));
 const dev = store.get('device', '');
 if (dev) $(`#devices button[data-w="${dev}"]`)?.click();
 renderRecent();

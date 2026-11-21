@@ -4,7 +4,7 @@
 // 2. Serves the site you opened (preview/<site>/...) straight from the folder on your PC.
 //    The files never leave your computer: this worker asks the Dev mode window for each
 //    file, and that window reads it from the folder you picked.
-const CACHE = 'devmode-v1';
+const CACHE = 'devmode-v2';
 const APP = ['./', 'index.html', 'app.js', 'app.css', 'inspect.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 

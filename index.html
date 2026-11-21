@@ -38,6 +38,11 @@
           <div id="unsupported" class="warn" hidden>
             This browser can't open folders. Open Dev mode in <b>Microsoft Edge</b> or <b>Google Chrome</b> on your laptop.
           </div>
+          <div id="phoneOnly" class="warn" hidden>💻 <b>Dev mode is a computer tool.</b><br>Open this page on your laptop or PC, in Microsoft Edge or Google Chrome.</div>
+          <div id="installBox" class="install-box" hidden>
+            <div class="grow"><b>⬇ Install Dev mode on this computer</b><div id="installHow" class="muted small">It gets its own icon and window, and opens without the internet.</div></div>
+            <button id="installBtn" class="btn primary" hidden>⬇ Install</button>
+          </div>
           <button id="openFolder" class="btn primary big">📂 Open a site folder</button>
           <p class="muted small">Pick the folder that has the site's <code>index.html</code> (for example <code>Documents\GitHub\Ai-Tools</code>). Your files stay on your PC.</p>
           <h3 id="recentTitle" class="sub-heading" hidden>Recent sites</h3>
@@ -254,7 +259,7 @@
   <script>
     // ---- Auto-update: when a new version is published, the app reloads itself quietly ----
     // APP_VERSION must match version.json — bump both on every change.
-    const APP_VERSION = '1';
+    const APP_VERSION = '2';
     document.getElementById('aboutVersion').textContent = 'Version ' + APP_VERSION;
     const VERSION_URL = 'version.json';
 
