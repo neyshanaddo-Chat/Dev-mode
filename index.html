@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Dev mode</title>
+  <meta name="theme-color" content="#ffffff" id="themeColor">
+  <script>
+    // Apply saved light/dark choice before the page draws (no flash).
+    try { if (localStorage.getItem('devmode-theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (_) {}
+  </script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Dev mode">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <h1 class="title">Dev mode</h1>
+      <div class="header-spacer"></div>
+    </header>
+
+    <!-- Home (main screen): the Dev mode tool -->
+    <main class="screen" id="screen-home">
+
+      <!-- Pick a site -->
+      <section id="home">
+        <div class="home-card">
+          <div class="brand-big"><img src="icons/icon-192.png" alt=""><div><h2>Change anything on your sites</h2><p class="muted">Open any website folder on your PC, see it, and edit it.</p></div></div>
+          <div id="unsupported" class="warn" hidden>
+            This browser can't open folders. Open Dev mode in <b>Microsoft Edge</b> or <b>Google Chrome</b> on your laptop.
+          </div>
+          <button id="openFolder" class="btn primary big">📂 Open a site folder</button>
+          <p class="muted small">Pick the folder that has the site's <code>index.html</code> (for example <code>Documents\GitHub\Ai-Tools</code>). Your files stay on your PC.</p>
+          <h3 id="recentTitle" class="sub-heading" hidden>Recent sites</h3>
+          <div id="recent"></div>
+          <details class="how">
+            <summary>📖 What you can do</summary>
+            <ul>
+              <li><b>See your site</b> exactly as it is in the folder, with 🖥 / 💻 / 📱 sizes.</li>
+              <li><b>🎯 Inspect</b> (Ctrl + Shift + D): click anything on the page to select it.</li>
+              <li><b>Change it yourself</b>: text, colours, size, bold, spacing, links, pictures, or delete / duplicate it. It saves straight into the code.</li>
+              <li><b>&lt;/&gt; Code</b>: jumps to the exact line in the file. Edit any file and press Ctrl + S.</li>
+              <li><b>↶ Undo</b>: puts back the last save, one step at a time.</li>
+              <li><b>📝 Requests</b>: write what you want Claude to do, then Copy all and paste it into Claude.</li>
+              <li><b>Auto refresh</b>: when Claude (or anything else) changes a file, the preview updates by itself.</li>
+              <li>Nothing is published. Your public site only changes when you push with GitHub Desktop.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
+      <!-- Working on a site -->
+      <section id="work" hidden>
+        <div id="bar">
+          <button id="homeBtn" class="btn ghost" title="Back to your sites">← Sites</button>
+          <span id="siteName" class="site-name"></span>
+          <form id="addrForm" class="addr"><span class="lock">🔒 private</span><input id="addr" spellcheck="false" autocomplete="off" title="Page in this site"></form>
+          <button id="reloadBtn" class="btn ghost" title="Reload the preview">⟳</button>
+          <div class="seg" id="devices" title="Screen size">
+            <button data-w="" class="on" title="Full width">🖥</button><button data-w="820" title="Tablet">💻</button><button data-w="390" title="Phone">📱</button>
+          </div>
+          <button id="inspectBtn" class="btn" title="Click things on the page to select them (Ctrl + Shift + D)">🎯 Inspect</button>
+          <button id="undoBtn" class="btn" disabled title="Put back the last save">↶ Undo</button>
+          <button id="popBtn" class="btn ghost" title="Open the preview in its own window">↗</button>
+        </div>
+
+        <div id="layout">
+          <aside id="files">
+            <div class="pane-head">
+              <span>Files</span>
+              <span class="grow"></span>
+              <button id="newFileBtn" class="icon" title="New file">＋</button>
+              <button id="rescanBtn" class="icon" title="Refresh the file list">⟳</button>
+            </div>
+            <div class="search-row"><input id="fileFilter" placeholder="Find a file…" spellcheck="false"></div>
+            <div class="search-row"><input id="grepInput" placeholder="Search inside all files… (Ctrl+Shift+F)" spellcheck="false"></div>
+            <div id="grepResults" hidden></div>
+            <div id="tree"></div>
+          </aside>
+          <div class="split" data-split="files"></div>
+
+          <section id="stage">
+            <div id="frameWrap"><iframe id="frame" title="Preview"></iframe></div>
+            <div id="inspectHint" hidden>🎯 Click anything on the page to select it · Esc to stop</div>
+          </section>
+          <div class="split" data-split="side"></div>
+
+          <section id="side">
+            <nav class="tabs" id="sideTabs">
+              <button data-pane="code" class="on">&lt;/&gt; Code</button>
+              <button data-pane="elem">🎯 Selected</button>
+              <button data-pane="req">📝 Requests <span id="reqCount" class="pill" hidden></span></button>
+            </nav>
+
+            <div class="pane" id="pane-code">
+              <div id="fileTabs"></div>
+              <div id="conflict" class="banner" hidden></div>
+              <div id="findBar" hidden>
+                <input id="findIn" placeholder="Find" spellcheck="false">
+                <span id="findCount" class="muted small"></span>
+                <button id="findPrev" class="icon" title="Previous (Shift+Enter)">↑</button>
+                <button id="findNext" class="icon" title="Next (Enter)">↓</button>
+                <input id="replIn" placeholder="Replace with" spellcheck="false">
+                <button id="replOne" class="btn small">Replace</button>
+                <button id="replAll" class="btn small">All</button>
+                <button id="findClose" class="icon" title="Close (Esc)">✕</button>
+              </div>
+              <div id="editor">
+                <div id="gutter"></div>
+                <div id="edBox">
+                  <pre id="hl" aria-hidden="true"></pre>
+                  <textarea id="code" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea>
+                </div>
+                <div id="edEmpty"><div>Pick a file on the left, or select something on the page and press <b>&lt;/&gt; Code</b>.</div></div>
+                <img id="imgView" alt="" hidden>
+              </div>
+              <div id="status">
+                <span id="stPos"></span><span class="grow"></span>
+                <button id="revertBtn" class="btn small ghost" hidden>Discard changes</button>
+                <button id="saveBtn" class="btn small primary" disabled>💾 Save (Ctrl+S)</button>
+              </div>
+            </div>
+
+            <div class="pane" id="pane-elem" hidden>
+              <div id="elemEmpty" class="empty">
+                <p>Nothing selected.</p>
+                <button class="btn primary" id="elemInspect">🎯 Inspect the page</button>
+                <p class="muted small">Then click anything on the page.</p>
+              </div>
+              <div id="elem" hidden></div>
+            </div>
+
+            <div class="pane" id="pane-req" hidden>
+              <p class="muted small">Write what you'd like Claude to change. When you're ready, <b>Copy all</b> and paste it into Claude (Ctrl + V).</p>
+              <textarea id="reqText" rows="3" placeholder="e.g. Make the welcome heading bigger and blue"></textarea>
+              <div class="row"><span id="reqFor" class="muted small"></span><span class="grow"></span><button id="reqAdd" class="btn primary small">Add request</button></div>
+              <div id="reqList"></div>
+              <div class="row"><button id="reqClear" class="btn small ghost">Clear all</button><span class="grow"></span><button id="reqCopy" class="btn primary">📋 Copy all</button></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <section class="screen" id="screen-settings">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <span class="setting-label">Appearance</span>
+        <div class="segmented" role="group" aria-label="Appearance">
+          <button type="button" data-theme-choice="light">Light</button>
+          <button type="button" data-theme-choice="dark">Dark</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-gallery">
+      <h2>Gallery</h2>
+      <p class="muted">No photos yet.</p>
+    </section>
+
+    <section class="screen" id="screen-values">
+      <h2>Our Values</h2>
+      <p class="muted">Values coming soon.</p>
+    </section>
+
+    <section class="screen" id="screen-contact">
+      <h2>Contact Us</h2>
+      <h3 class="sub-heading">Where to find us</h3>
+      <h4 class="sub-sub-heading">Location</h4>
+      <p class="muted">Address coming soon.</p>
+    </section>
+
+    <section class="screen" id="screen-about">
+      <h2>About</h2>
+      <p>Dev mode — open any website folder on your PC, see it, and change anything.</p>
+      <p class="muted" id="aboutVersion"></p>
+    </section>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <nav class="sidebar" id="sidebar" aria-label="Menu" aria-hidden="true">
+    <div class="sidebar-top">
+      <h2 class="sidebar-title">Menu</h2>
+      <button class="close-btn" id="closeBtn" aria-label="Close menu">&times;</button>
+    </div>
+    <a class="nav-link" href="#home" data-screen="home">Home</a>
+    <a class="nav-link" href="#gallery" data-screen="gallery">Gallery</a>
+    <a class="nav-link" href="#values" data-screen="values">Our Values</a>
+    <a class="nav-link" href="#contact" data-screen="contact">Contact Us</a>
+
+    <div class="nav-divider"></div>
+    <a class="nav-link" href="#settings" data-screen="settings">Settings</a>
+    <a class="nav-link" href="#about" data-screen="about">About</a>
+  </nav>
+
+  <div id="toast"></div>
+  <div id="modal" hidden><div class="modal-card"><p id="modalText"></p><input id="modalInput" spellcheck="false"><div class="row"><span class="grow"></span><button id="modalNo" class="btn">Cancel</button><button id="modalYes" class="btn primary">OK</button></div></div></div>
+
+  <script>
+    // ---- Sidebar open / close ----
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('backdrop');
+    const menuBtn = document.getElementById('menuBtn');
+    function setMenu(open) {
+      sidebar.classList.toggle('open', open);
+      backdrop.classList.toggle('open', open);
+      menuBtn.setAttribute('aria-expanded', open);
+      sidebar.setAttribute('aria-hidden', !open);
+    }
+    menuBtn.addEventListener('click', () => setMenu(true));
+    document.getElementById('closeBtn').addEventListener('click', () => setMenu(false));
+    backdrop.addEventListener('click', () => setMenu(false));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+
+    // ---- Screens (must match the screen-<name> ids and menu links) ----
+    const SCREENS = ['home', 'gallery', 'values', 'contact', 'settings', 'about'];
+    function showScreen() {
+      let name = location.hash.slice(1);
+      if (!SCREENS.includes(name)) name = 'home';
+      SCREENS.forEach((s) => document.getElementById('screen-' + s).classList.toggle('active', s === name));
+      document.querySelectorAll('.nav-link').forEach((a) => a.classList.toggle('active', a.dataset.screen === name));
+      setMenu(false);
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', showScreen);
+    document.querySelectorAll('.nav-link').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+    showScreen();
+
+    // ---- Light / dark mode ----
+    function applyTheme(theme) {
+      if (theme === 'dark') document.documentElement.dataset.theme = 'dark';
+      else delete document.documentElement.dataset.theme;
+      document.getElementById('themeColor').setAttribute('content', theme === 'dark' ? '#111111' : '#ffffff');
+      document.querySelectorAll('[data-theme-choice]').forEach((b) =>
+        b.classList.toggle('active', b.dataset.themeChoice === theme));
+      try { localStorage.setItem('devmode-theme', theme); } catch (_) {}
+    }
+    document.querySelectorAll('[data-theme-choice]').forEach((b) =>
+      b.addEventListener('click', () => applyTheme(b.dataset.themeChoice)));
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+  </script>
+
+  <script src="app.js"></script>
+
+  <script>
+    // ---- Auto-update: when a new version is published, the app reloads itself quietly ----
+    // APP_VERSION must match version.json — bump both on every change.
+    const APP_VERSION = '1';
+    document.getElementById('aboutVersion').textContent = 'Version ' + APP_VERSION;
+    const VERSION_URL = 'version.json';
+
+    async function checkForUpdate() {
+      try {
+        const res = await fetch(VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const { version } = await res.json();
+        if (version === APP_VERSION) return;
+        // Don't reload while you have unsaved code: wait until it's saved.
+        if (window.__dmBusy && window.__dmBusy()) return;
+        // Only try once per new version, so a slow server can't cause a reload loop.
+        const key = 'reloaded-for-' + version;
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, '1');
+        const reg = await navigator.serviceWorker?.getRegistration();
+        if (reg) await reg.update();
+        location.reload();
+      } catch (_) { /* offline: keep running the downloaded copy */ }
+    }
+
+    checkForUpdate();
+    setInterval(() => { if (!document.hidden) checkForUpdate(); }, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+    window.addEventListener('focus', checkForUpdate);
+  </script>
+</body>
+</html>
